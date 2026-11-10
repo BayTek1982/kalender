@@ -33,6 +33,17 @@
   .nr{line-height:26px}
   .punkte{display:flex;justify-content:center;gap:3px;margin-top:3px;height:7px}
   .punkte i{width:6px;height:6px;border-radius:50%}
+  .jahr{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 14px}
+  @media(max-width:430px){.jahr{grid-template-columns:repeat(2,1fr)}}
+  .mon{cursor:pointer}.mon h3{margin:0 0 4px;text-align:center;font-size:17px;font-weight:500}
+  .mon h3.jetzt span{background:var(--text);color:var(--hg);border-radius:7px;padding:1px 8px;font-weight:700}
+  .mini{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11.5px}
+  .mini span{line-height:19px;border-radius:5px}
+  .mini .k{color:var(--leise);font-size:9.5px}.mini .rot{color:var(--rot)}
+  .mini .d{background:var(--karte)}.mini .ft{background:rgba(248,113,113,.22);font-weight:700}
+  .mini .heute{background:var(--text)!important;color:var(--hg)!important;font-weight:700}
+  .eintrag.feier{border-left-color:var(--rot);cursor:default}
+  .ftz{display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid var(--rand);font-size:15px}.ftz span{min-width:104px;color:var(--leise)}
   h2{font-size:16px;margin:18px 2px 8px;font-weight:600}
   h2 small{color:var(--rot);font-weight:400;margin-left:6px}
   .eintrag{display:flex;gap:10px;align-items:flex-start;background:var(--karte);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer;border-left:5px solid var(--akzent)}
@@ -63,13 +74,16 @@
 <body>
 <div id="app">
   <section class="seite an" id="sKalender">
-    <div class="kopf"><button class="knopf" id="bVor" aria-label="Monat zurück">‹</button><h1 id="monat" style="text-align:center"></h1><button class="knopf" id="bNach" aria-label="Monat vor">›</button><button class="knopf" id="bHeute">Heute</button></div>
+    <div class="kopf"><button class="knopf" id="bVor" aria-label="Monat zurück">‹</button><h1 id="monat" style="text-align:center"></h1><button class="knopf" id="bNach" aria-label="Monat vor">›</button><button class="knopf" id="bHeute">Heute</button><button class="knopf" id="bJahr">Jahr</button></div>
+    <div id="monatSicht">
     <div class="wt"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
     <div class="gitter" id="gitter"></div>
     <div class="kopf" style="margin-top:6px"><h2 id="tagTitel" style="flex:1"></h2><button class="knopf haupt" id="bTermin">+ Termin</button></div>
     <div id="tagListe"></div>
     <h2>Nächste Termine</h2>
     <div id="naechste"></div>
+    </div>
+    <div id="jahrWrap" hidden><div class="jahr" id="jahrSicht"></div><h2 id="ftTitel"></h2><div id="ftListe"></div></div>
   </section>
   <section class="seite" id="sNotizen">
     <div class="kopf"><h1>Notizbuch</h1><button class="knopf haupt" id="bNotiz">+ Notiz</button></div>
@@ -142,8 +156,26 @@ const feiertag=s=>feiertage(+s.slice(0,4))[s];
 const arbeitsfrei=s=>{ const n=feiertag(s); return n&&n!=="Heiligabend"&&n!=="Silvester"; };
 
 /* ---------- Kalender ---------- */
-let sicht=new Date(), gewaehlt=heute(); sicht.setDate(1);
+let sicht=new Date(), gewaehlt=heute(), modus="monat"; sicht.setDate(1);
+function jahrZeigen(){
+  const j=sicht.getFullYear(), jetzt=new Date(), h=heute(), box=$("jahrSicht"); $("monat").textContent=j; box.innerHTML="";
+  for(let m=0;m<12;m++){
+    const kopf=el("h3",{class:j===jetzt.getFullYear()&&m===jetzt.getMonth()?"jetzt":""},el("span",{text:MON[m].slice(0,3)})), g=el("div",{class:"mini"});
+    "MDMDFSS".split("").forEach((c,i)=>g.append(el("span",{class:"k"+(i===6?" rot":""),text:c})));
+    for(let i=(new Date(j,m,1).getDay()+6)%7;i>0;i--) g.append(el("span"));
+    const n=new Date(j,m+1,0).getDate();
+    for(let d=1;d<=n;d++){ const s=j+"-"+p2(m+1)+"-"+p2(d), t=amTag(s), frei=arbeitsfrei(s), so=new Date(j,m,d).getDay()===0;
+      const z=el("span",{class:"d"+(so||frei?" rot":"")+(frei?" ft":"")+(s===h?" heute":""),text:d,title:feiertag(s)||null});
+      if(t.length) z.style.background=(t[0].farbe||FARBEN[0])+"66"; g.append(z); }
+    box.append(el("div",{class:"mon",onclick:()=>{ sicht=new Date(j,m,1); modus="monat"; kalender(); }},kopf,g));
+  }
+  $("ftTitel").textContent="Feiertage "+j+" (Bayern)"; const l=$("ftListe"); l.innerHTML="";
+  Object.entries(feiertage(j)).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([s,name])=>{ const d=dat(s);
+    l.append(el("div",{class:"ftz"},el("span",{text:WT[d.getDay()].slice(0,2)+", "+p2(d.getDate())+"."+p2(d.getMonth()+1)+"."}),el("b",{text:name+(arbeitsfrei(s)?"":" (kein Feiertag)"),style:arbeitsfrei(s)?"":"font-weight:400;color:var(--leise)"}))); });
+}
 function kalender(){
+  $("monatSicht").hidden=modus==="jahr"; $("jahrWrap").hidden=modus!=="jahr"; $("bJahr").textContent=modus==="jahr"?"Monat":"Jahr";
+  if(modus==="jahr") return jahrZeigen();
   const j=sicht.getFullYear(), m=sicht.getMonth(); $("monat").textContent=MON[m]+" "+j;
   const start=new Date(j,m,1,12); start.setDate(1-((start.getDay()+6)%7));
   const g=$("gitter"); g.innerHTML=""; const h=heute();
@@ -156,7 +188,8 @@ function kalender(){
   }
   $("tagTitel").textContent=langDatum(gewaehlt); const f=feiertag(gewaehlt); if(f)$("tagTitel").append(el("small",{text:f}));
   const l=$("tagListe"); l.innerHTML=""; const liste=amTag(gewaehlt);
-  if(!liste.length) l.append(el("div",{class:"leer",text:"Keine Termine an diesem Tag."}));
+  if(f) l.append(el("div",{class:"eintrag feier"},el("div",{class:"zeit",text:"🎉"}),el("div",{},el("b",{text:f}),el("p",{text:arbeitsfrei(gewaehlt)?"Gesetzlicher Feiertag in Bayern":"Kein gesetzlicher Feiertag"}))));
+  if(!liste.length&&!f) l.append(el("div",{class:"leer",text:"Keine Termine an diesem Tag."}));
   liste.forEach(t=>l.append(karte(t)));
   const n=$("naechste"); n.innerHTML=""; let zahl=0; const jetzt=p2(new Date().getHours())+":"+p2(new Date().getMinutes());
   for(let i=0;i<120&&zahl<6;i++){ const s=plus(h,i); for(const t of amTag(s)){ if(i===0&&t.zeit&&t.zeit<jetzt)continue; if(zahl++>=6)break; n.append(karte(t,s)); } }
@@ -171,8 +204,9 @@ function karte(t,tag){
     t.erinn!=="keine"&&t.zeit?el("div",{text:"🔔"}):null);
   e.style.borderLeftColor=t.farbe||FARBEN[0]; return e;
 }
-$("bVor").onclick=()=>{ sicht.setMonth(sicht.getMonth()-1); kalender(); };
-$("bNach").onclick=()=>{ sicht.setMonth(sicht.getMonth()+1); kalender(); };
+$("bVor").onclick=()=>{ if(modus==="jahr")sicht.setFullYear(sicht.getFullYear()-1); else sicht.setMonth(sicht.getMonth()-1); kalender(); };
+$("bNach").onclick=()=>{ if(modus==="jahr")sicht.setFullYear(sicht.getFullYear()+1); else sicht.setMonth(sicht.getMonth()+1); kalender(); };
+$("bJahr").onclick=()=>{ modus=modus==="jahr"?"monat":"jahr"; kalender(); };
 $("bHeute").onclick=()=>{ sicht=new Date(); sicht.setDate(1); gewaehlt=heute(); kalender(); };
 $("bTermin").onclick=()=>terminForm(null);
 
