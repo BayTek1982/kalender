@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalender</title>
+<meta name="theme-color" content="#0f1420">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+  :root{--hg:#0f1420;--karte:#1b2233;--karte2:#232c42;--text:#f2f5fb;--leise:#8e99b3;--akzent:#38bdf8;--akzentText:#06202e;--rand:rgba(255,255,255,.08);--rot:#f87171}
+  @media (prefers-color-scheme: light){
+    :root{--hg:#f3f5f9;--karte:#ffffff;--karte2:#e6ebf3;--text:#131a26;--leise:#6b7689;--akzent:#0284c7;--akzentText:#ffffff;--rand:rgba(0,0,0,.09);--rot:#dc2626}
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;background:var(--hg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  #app{max-width:760px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:10px 12px 84px}
+  .seite{display:none}.seite.an{display:block}
+  .kopf{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
+  .kopf h1{flex:1;font-size:21px;margin:0;font-weight:600}
+  .knopf{border:1px solid var(--rand);background:var(--karte);border-radius:12px;padding:9px 13px;font-size:15px}
+  .knopf.haupt{background:var(--akzent);color:var(--akzentText);border-color:transparent;font-weight:600}
+  .knopf.rot{color:var(--rot)}
+  .wt,.gitter{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .wt div{text-align:center;font-size:12px;color:var(--leise);padding:4px 0}
+  .tag{background:var(--karte);border:1px solid transparent;border-radius:12px;min-height:54px;padding:5px 2px 4px;text-align:center;cursor:pointer;font-size:15px}
+  .tag.fremd{opacity:.35}.tag.frei .nr,.tag.so .nr{color:var(--rot)}
+  .tag.heute .nr{background:var(--akzent);color:var(--akzentText);border-radius:999px;display:inline-block;min-width:26px;font-weight:700}
+  .tag.gewaehlt{border-color:var(--akzent)}
+  .nr{line-height:26px}
+  .punkte{display:flex;justify-content:center;gap:3px;margin-top:3px;height:7px}
+  .punkte i{width:6px;height:6px;border-radius:50%}
+  h2{font-size:16px;margin:18px 2px 8px;font-weight:600}
+  h2 small{color:var(--rot);font-weight:400;margin-left:6px}
+  .eintrag{display:flex;gap:10px;align-items:flex-start;background:var(--karte);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer;border-left:5px solid var(--akzent)}
+  .eintrag .zeit{min-width:48px;color:var(--leise);font-variant-numeric:tabular-nums}
+  .eintrag b{font-weight:600}.eintrag p{margin:3px 0 0;color:var(--leise);font-size:14px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+  .leer{color:var(--leise);padding:14px 4px}
+  nav{position:fixed;left:0;right:0;bottom:0;background:var(--karte);border-top:1px solid var(--rand);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+  nav button{flex:1;max-width:240px;border:0;background:none;padding:9px 4px;border-radius:12px;color:var(--leise);font-size:14px}
+  nav button.an{color:var(--akzent);background:var(--karte2);font-weight:600}
+  #blende{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:5}
+  #blende.an{display:flex}
+  .blatt{background:var(--hg);width:100%;max-width:760px;max-height:94vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 14px 20px;display:flex;flex-direction:column;gap:10px}
+  label{font-size:13px;color:var(--leise);display:flex;flex-direction:column;gap:4px}
+  input[type=text],input[type=date],input[type=time],input[type=search],select,textarea{background:var(--karte);border:1px solid var(--rand);border-radius:12px;padding:11px;font-size:16px;width:100%}
+  textarea{min-height:110px;resize:vertical}
+  .reihe{display:flex;gap:8px}.reihe>*{flex:1}
+  .farben{display:flex;gap:10px}.farben button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}.farben button.an{border-color:var(--text)}
+  .info{background:var(--karte);border-radius:14px;padding:12px 14px;color:var(--leise);font-size:14px;line-height:1.5;margin-bottom:10px}
+  .info b{color:var(--text)}
+  #alarm{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9;padding:20px}
+  #alarm.an{display:flex}
+  #alarm div{background:var(--karte);border-radius:20px;padding:22px;max-width:380px;width:100%;text-align:center}
+  #alarm h3{margin:6px 0;font-size:22px}
+  #hinweis{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--text);color:var(--hg);padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:8;white-space:nowrap}
+  #hinweis.an{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="seite an" id="sKalender">
+    <div class="kopf"><button class="knopf" id="bVor" aria-label="Monat zurück">‹</button><h1 id="monat" style="text-align:center"></h1><button class="knopf" id="bNach" aria-label="Monat vor">›</button><button class="knopf" id="bHeute">Heute</button></div>
+    <div class="wt"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
+    <div class="gitter" id="gitter"></div>
+    <div class="kopf" style="margin-top:6px"><h2 id="tagTitel" style="flex:1"></h2><button class="knopf haupt" id="bTermin">+ Termin</button></div>
+    <div id="tagListe"></div>
+    <h2>Nächste Termine</h2>
+    <div id="naechste"></div>
+  </section>
+  <section class="seite" id="sNotizen">
+    <div class="kopf"><h1>Notizbuch</h1><button class="knopf haupt" id="bNotiz">+ Notiz</button></div>
+    <input type="search" id="suche" placeholder="Notizen durchsuchen …" style="margin-bottom:10px">
+    <div id="notizListe"></div>
+  </section>
+  <section class="seite" id="sSicherung">
+    <div class="kopf"><h1>Sicherung &amp; Einstellungen</h1></div>
+    <div class="info" id="sInfo"></div>
+    <div class="reihe" style="margin-bottom:10px"><button class="knopf haupt" id="bExport">Sicherung speichern</button><button class="knopf" id="bImport">Sicherung einspielen</button></div>
+    <input type="file" id="datei" accept=".json,application/json" hidden>
+    <div class="info">Alle Termine und Notizen liegen <b>nur auf diesem Gerät</b>. Speichere regelmäßig eine Sicherung (eine kleine Datei). Auf einem neuen Handy oder am PC spielst du sie wieder ein. Beim Einspielen wird nichts gelöscht, die Einträge werden dazugefügt.</div>
+    <h2>Erinnerungen</h2>
+    <div class="info" id="eInfo"></div>
+    <button class="knopf" id="bErlauben">Benachrichtigungen erlauben</button>
+  </section>
+</div>
+<nav><button data-s="sKalender" class="an">📅 Kalender</button><button data-s="sNotizen">📝 Notizen</button><button data-s="sSicherung">💾 Sicherung</button></nav>
+<div id="blende"><div class="blatt" id="blatt"></div></div>
+<div id="alarm"><div><div style="font-size:40px">🔔</div><h3 id="aTitel"></h3><p id="aText" style="color:var(--leise)"></p><button class="knopf haupt" id="aOk" style="width:100%">OK</button></div></div>
+<div id="hinweis"></div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const FARBEN=["#38bdf8","#4ade80","#facc15","#fb923c","#f87171","#c084fc"];
+const WT=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MON=["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const ERINN={keine:"Keine",0:"Zur Uhrzeit",10:"10 Minuten vorher",30:"30 Minuten vorher",60:"1 Stunde vorher",1440:"1 Tag vorher"};
+const WDH={nie:"Nie",tag:"Täglich",woche:"Wöchentlich",monat:"Monatlich",jahr:"Jährlich"};
+
+/* ---------- Daten ---------- */
+let D={termine:[],notizen:[],gemeldet:{},sicherung:null,geaendert:null};
+try{ const j=JSON.parse(localStorage.getItem("kalender-daten")); if(j&&Array.isArray(j.termine)) D=Object.assign(D,j); }catch(e){}
+function speichern(){ D.geaendert=Date.now(); try{ localStorage.setItem("kalender-daten",JSON.stringify(D)); }catch(e){ hinweis("Speichern fehlgeschlagen"); } }
+const neuId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const p2=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+const dat=s=>{ const a=s.split("-"); return new Date(+a[0],+a[1]-1,+a[2],12); };
+const plus=(s,n)=>{ const d=dat(s); d.setDate(d.getDate()+n); return iso(d); };
+const heute=()=>iso(new Date());
+const langDatum=s=>{ const d=dat(s); return WT[d.getDay()]+", "+d.getDate()+". "+MON[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?" "+d.getFullYear():""); };
+function hinweis(t){ const h=$("hinweis"); h.textContent=t; h.classList.add("an"); setTimeout(()=>h.classList.remove("an"),1800); }
+function el(tag,attr,...kinder){ const e=document.createElement(tag); for(const k in attr||{}){ if(k==="text")e.textContent=attr[k]; else if(k.startsWith("on"))e.addEventListener(k.slice(2),attr[k]); else if(attr[k]!==false&&attr[k]!=null)e.setAttribute(k,attr[k]); } kinder.forEach(k=>k&&e.append(k)); return e; }
+
+function findetStatt(t,s){
+  if(s<t.datum) return false;
+  if(t.wdh==="nie"||!t.wdh) return s===t.datum;
+  if(t.wdh==="tag") return true;
+  const a=dat(t.datum), b=dat(s);
+  if(t.wdh==="woche") return Math.round((b-a)/864e5)%7===0;
+  if(t.wdh==="monat") return a.getDate()===b.getDate();
+  if(t.wdh==="jahr") return a.getDate()===b.getDate()&&a.getMonth()===b.getMonth();
+  return false;
+}
+const amTag=s=>D.termine.filter(t=>findetStatt(t,s)).sort((a,b)=>(a.zeit||"").localeCompare(b.zeit||""));
+
+/* ---------- Feiertage Bayern ---------- */
+const FT={};
+function feiertage(j){
+  if(FT[j]) return FT[j];
+  const a=j%19,b=Math.floor(j/100),c=j%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mo=Math.floor((h+l-7*m+114)/31), ta=((h+l-7*m+114)%31)+1, ostern=iso(new Date(j,mo-1,ta,12));
+  const r={}; r[j+"-01-01"]="Neujahr"; r[j+"-01-06"]="Heilige Drei Könige"; r[plus(ostern,-2)]="Karfreitag"; r[ostern]="Ostersonntag"; r[plus(ostern,1)]="Ostermontag";
+  r[j+"-05-01"]="Tag der Arbeit"; r[plus(ostern,39)]="Christi Himmelfahrt"; r[plus(ostern,49)]="Pfingstsonntag"; r[plus(ostern,50)]="Pfingstmontag"; r[plus(ostern,60)]="Fronleichnam";
+  r[j+"-08-15"]="Mariä Himmelfahrt"; r[j+"-10-03"]="Tag der Deutschen Einheit"; r[j+"-11-01"]="Allerheiligen"; r[j+"-12-24"]="Heiligabend"; r[j+"-12-25"]="1. Weihnachtstag"; r[j+"-12-26"]="2. Weihnachtstag"; r[j+"-12-31"]="Silvester";
+  return FT[j]=r;
+}
+const feiertag=s=>feiertage(+s.slice(0,4))[s];
+const arbeitsfrei=s=>{ const n=feiertag(s); return n&&n!=="Heiligabend"&&n!=="Silvester"; };
+
+/* ---------- Kalender ---------- */
+let sicht=new Date(), gewaehlt=heute(); sicht.setDate(1);
+function kalender(){
+  const j=sicht.getFullYear(), m=sicht.getMonth(); $("monat").textContent=MON[m]+" "+j;
+  const start=new Date(j,m,1,12); start.setDate(1-((start.getDay()+6)%7));
+  const g=$("gitter"); g.innerHTML=""; const h=heute();
+  const wochen=Math.ceil((((new Date(j,m,1).getDay()+6)%7)+new Date(j,m+1,0).getDate())/7);
+  for(let i=0;i<wochen*7;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i); const s=iso(d);
+    const kl=["tag"]; if(d.getMonth()!==m)kl.push("fremd"); if(s===h)kl.push("heute"); if(s===gewaehlt)kl.push("gewaehlt"); if(d.getDay()===0)kl.push("so"); if(arbeitsfrei(s))kl.push("frei");
+    const pk=el("div",{class:"punkte"}); amTag(s).slice(0,4).forEach(t=>{ const p=el("i"); p.style.background=t.farbe||FARBEN[0]; pk.append(p); });
+    g.append(el("div",{class:kl.join(" "),onclick:()=>{ gewaehlt=s; if(d.getMonth()!==m){ sicht=new Date(d.getFullYear(),d.getMonth(),1); } kalender(); }},el("div",{class:"nr",text:d.getDate()}),pk));
+  }
+  $("tagTitel").textContent=langDatum(gewaehlt); const f=feiertag(gewaehlt); if(f)$("tagTitel").append(el("small",{text:f}));
+  const l=$("tagListe"); l.innerHTML=""; const liste=amTag(gewaehlt);
+  if(!liste.length) l.append(el("div",{class:"leer",text:"Keine Termine an diesem Tag."}));
+  liste.forEach(t=>l.append(karte(t)));
+  const n=$("naechste"); n.innerHTML=""; let zahl=0; const jetzt=p2(new Date().getHours())+":"+p2(new Date().getMinutes());
+  for(let i=0;i<120&&zahl<6;i++){ const s=plus(h,i); for(const t of amTag(s)){ if(i===0&&t.zeit&&t.zeit<jetzt)continue; if(zahl++>=6)break; n.append(karte(t,s)); } }
+  if(!zahl) n.append(el("div",{class:"leer",text:"Keine kommenden Termine."}));
+}
+function karte(t,tag){
+  const e=el("div",{class:"eintrag",onclick:()=>terminForm(t)},
+    el("div",{class:"zeit",text:t.zeit||"ganztags"}),
+    el("div",{style:"flex:1;min-width:0"},el("b",{text:t.titel||"(ohne Titel)"}),
+      tag?el("p",{text:langDatum(tag)+(t.wdh&&t.wdh!=="nie"?" · "+WDH[t.wdh].toLowerCase():"")}):null,
+      !tag&&t.notiz?el("p",{text:t.notiz}):null),
+    t.erinn!=="keine"&&t.zeit?el("div",{text:"🔔"}):null);
+  e.style.borderLeftColor=t.farbe||FARBEN[0]; return e;
+}
+$("bVor").onclick=()=>{ sicht.setMonth(sicht.getMonth()-1); kalender(); };
+$("bNach").onclick=()=>{ sicht.setMonth(sicht.getMonth()+1); kalender(); };
+$("bHeute").onclick=()=>{ sicht=new Date(); sicht.setDate(1); gewaehlt=heute(); kalender(); };
+$("bTermin").onclick=()=>terminForm(null);
+
+/* ---------- Formulare ---------- */
+function blatt(...k){ const b=$("blatt"); b.innerHTML=""; b.append(...k.filter(Boolean)); $("blende").classList.add("an"); }
+function zu(){ $("blende").classList.remove("an"); }
+$("blende").addEventListener("click",e=>{ if(e.target===$("blende")&&!$("blende").dataset.fest) zu(); });
+function auswahl(obj,wert){ const s=el("select"); for(const k in obj){ const o=el("option",{value:k,text:obj[k]}); if(String(k)===String(wert))o.selected=true; s.append(o); } return s; }
+function loeschKnopf(fn){ let scharf=false; const b=el("button",{class:"knopf rot",text:"Löschen",onclick:()=>{ if(scharf){ fn(); } else { scharf=true; b.textContent="Wirklich löschen?"; setTimeout(()=>{ scharf=false; b.textContent="Löschen"; },3000); } }}); return b; }
+function terminForm(t){
+  const neu=!t; t=t||{id:neuId(),titel:"",datum:gewaehlt,zeit:"",erinn:"10",wdh:"nie",notiz:"",farbe:FARBEN[0]};
+  const iT=el("input",{type:"text",value:t.titel,placeholder:"z. B. Zahnarzt"}), iD=el("input",{type:"date",value:t.datum}), iZ=el("input",{type:"time",value:t.zeit||""});
+  const sE=auswahl(ERINN,t.erinn), sW=auswahl(WDH,t.wdh||"nie"), iN=el("textarea",{placeholder:"Notiz zum Termin"}); iN.value=t.notiz||"";
+  let farbe=t.farbe||FARBEN[0]; const fb=el("div",{class:"farben"});
+  FARBEN.forEach(f=>{ const b=el("button",{type:"button",class:f===farbe?"an":"","aria-label":"Farbe",onclick:()=>{ farbe=f; [...fb.children].forEach(x=>x.classList.toggle("an",x===b)); }}); b.style.background=f; fb.append(b); });
+  const lesen=()=>({id:t.id,titel:iT.value.trim(),datum:iD.value||gewaehlt,zeit:iZ.value,erinn:sE.value,wdh:sW.value,notiz:iN.value.trim(),farbe});
+  blatt(el("div",{class:"kopf"},el("h1",{text:neu?"Neuer Termin":"Termin bearbeiten"}),el("button",{class:"knopf",text:"✕",onclick:zu})),
+    el("label",{text:"Titel"},iT), el("div",{class:"reihe"},el("label",{text:"Datum"},iD),el("label",{text:"Uhrzeit (leer = ganztags)"},iZ)),
+    el("div",{class:"reihe"},el("label",{text:"Erinnerung"},sE),el("label",{text:"Wiederholen"},sW)),
+    el("label",{text:"Farbe"},fb), el("label",{text:"Notiz"},iN),
+    el("div",{class:"reihe"},
+      neu?null:loeschKnopf(()=>{ D.termine=D.termine.filter(x=>x.id!==t.id); speichern(); zu(); kalender(); hinweis("Termin gelöscht"); }),
+      neu?null:el("button",{class:"knopf",text:"📲 In Handy-Kalender",onclick:()=>ics(lesen())}),
+      el("button",{class:"knopf haupt",text:"Speichern",onclick:()=>{ const n=lesen(); if(!n.titel){ iT.focus(); return hinweis("Bitte einen Titel eingeben"); }
+        const i=D.termine.findIndex(x=>x.id===n.id); if(i>=0)D.termine[i]=n; else D.termine.push(n);
+        Object.keys(D.gemeldet).forEach(k=>{ if(k.startsWith(n.id+"|")) delete D.gemeldet[k]; });
+        speichern(); gewaehlt=n.datum; sicht=new Date(dat(n.datum).getFullYear(),dat(n.datum).getMonth(),1); zu(); kalender(); hinweis("Gespeichert"); }})));
+  if(neu) setTimeout(()=>iT.focus(),50);
+}
+
+/* ---------- Notizbuch ---------- */
+function notizen(){
+  const q=$("suche").value.trim().toLowerCase(), l=$("notizListe"); l.innerHTML="";
+  const liste=D.notizen.filter(n=>!q||(n.titel+" "+n.text).toLowerCase().includes(q)).sort((a,b)=>(b.fest?1:0)-(a.fest?1:0)||b.zeit-a.zeit);
+  if(!liste.length) l.append(el("div",{class:"leer",text:q?"Nichts gefunden.":"Noch keine Notizen. Tippe auf „+ Notiz“."}));
+  liste.forEach(n=>{ const d=new Date(n.zeit);
+    l.append(el("div",{class:"eintrag",onclick:()=>notizForm(n)},el("div",{style:"flex:1;min-width:0"},el("b",{text:(n.fest?"📌 ":"")+(n.titel||"(ohne Titel)")}),el("p",{text:n.text}),
+      el("p",{text:"Geändert am "+d.getDate()+"."+(d.getMonth()+1)+"."+d.getFullYear()})))); });
+}
+$("suche").addEventListener("input",notizen);
+$("bNotiz").onclick=()=>notizForm(null);
+function notizForm(n){
+  const neu=!n; n=n||{id:neuId(),titel:"",text:"",fest:false,zeit:Date.now()};
+  const iT=el("input",{type:"text",value:n.titel,placeholder:"Titel"}), iX=el("textarea",{placeholder:"Deine Notiz …",style:"min-height:42vh"}); iX.value=n.text;
+  let fest=!!n.fest; const bF=el("button",{class:"knopf",text:fest?"📌 Angeheftet":"📌 Anheften",onclick:()=>{ fest=!fest; bF.textContent=fest?"📌 Angeheftet":"📌 Anheften"; }});
+  const sichern=()=>{ const titel=iT.value.trim(), text=iX.value; if(!titel&&!text.trim()) return false;
+    if(titel===n.titel&&text===n.text&&fest===!!n.fest&&!neu) return true;
+    const x={id:n.id,titel,text,fest,zeit:Date.now()}; const i=D.notizen.findIndex(y=>y.id===n.id); if(i>=0)D.notizen[i]=x; else D.notizen.push(x); speichern(); return true; };
+  blatt(el("div",{class:"kopf"},el("h1",{text:neu?"Neue Notiz":"Notiz"}),bF),
+    iT,iX,
+    el("div",{class:"reihe"},neu?null:loeschKnopf(()=>{ D.notizen=D.notizen.filter(y=>y.id!==n.id); speichern(); zu(); notizen(); hinweis("Notiz gelöscht"); }),
+      el("button",{class:"knopf haupt",text:"Speichern & schließen",onclick:()=>{ if(sichern())hinweis("Gespeichert"); zu(); notizen(); }})));
+  if(neu) setTimeout(()=>iT.focus(),50);
+}
+
+/* ---------- Sicherung ---------- */
+function laden(name,inhalt,typ){ const a=el("a",{href:URL.createObjectURL(new Blob([inhalt],{type:typ})),download:name}); document.body.append(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },2000); }
+function sicherungInfo(){
+  const s=D.sicherung?new Date(D.sicherung):null, offen=D.geaendert&&(!D.sicherung||D.geaendert>D.sicherung);
+  $("sInfo").innerHTML=""; $("sInfo").append(el("b",{text:D.termine.length+" Termine, "+D.notizen.length+" Notizen"}),document.createElement("br"),
+    document.createTextNode(s?"Letzte Sicherung: "+s.toLocaleDateString("de-DE")+" um "+s.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+" Uhr"+(offen?" – seitdem gibt es Änderungen.":" – alles gesichert."):"Noch keine Sicherung gespeichert."));
+  const erlaubt=("Notification" in window)?Notification.permission:"fehlt";
+  $("eInfo").innerHTML=""; $("eInfo").append(document.createTextNode("Die Erinnerung klingelt, solange diese App geöffnet ist (auch im Hintergrund, wenn das Handy sie nicht beendet hat). Ist die App ganz geschlossen, kann sie nicht klingeln. Für wichtige Termine tippe im Termin auf „📲 In Handy-Kalender“. Dann erinnert dich der Kalender deines Handys zuverlässig."),document.createElement("br"),
+    el("b",{text:"Benachrichtigungen: "+(erlaubt==="granted"?"erlaubt":erlaubt==="denied"?"blockiert (in den Browser-Einstellungen ändern)":erlaubt==="fehlt"?"auf diesem Gerät nicht möglich":"noch nicht erlaubt")}));
+  $("bErlauben").hidden=erlaubt!=="default";
+}
+$("bExport").onclick=()=>{ D.sicherung=Date.now(); try{localStorage.setItem("kalender-daten",JSON.stringify(D));}catch(e){}
+  laden("kalender-sicherung-"+heute()+".json",JSON.stringify({app:"kalender",version:1,termine:D.termine,notizen:D.notizen},null,1),"application/json"); sicherungInfo(); hinweis("Sicherung gespeichert"); };
+$("bImport").onclick=()=>$("datei").click();
+$("datei").addEventListener("change",async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f)return;
+  try{ const j=JSON.parse(await f.text()); if(!Array.isArray(j.termine)||!Array.isArray(j.notizen)) throw 0; let n=0;
+    for(const t of j.termine){ if(!t||!t.id||!t.datum)continue; const i=D.termine.findIndex(x=>x.id===t.id); if(i>=0)D.termine[i]=t; else D.termine.push(t); n++; }
+    for(const t of j.notizen){ if(!t||!t.id)continue; const i=D.notizen.findIndex(x=>x.id===t.id); if(i>=0)D.notizen[i]=t; else D.notizen.push(t); n++; }
+    speichern(); kalender(); notizen(); sicherungInfo(); hinweis(n+" Einträge eingespielt");
+  }catch(err){ hinweis("Das ist keine gültige Sicherung"); } });
+$("bErlauben").onclick=async()=>{ try{ await Notification.requestPermission(); }catch(e){} sicherungInfo(); };
+
+/* ---------- Handy-Kalender (.ics) ---------- */
+function ics(t){
+  const d=t.datum.replace(/-/g,""), esc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/([,;])/g,"\\$1");
+  const z=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Kalender//DE","BEGIN:VEVENT","UID:"+t.id+"@kalender","DTSTAMP:"+new Date().toISOString().replace(/[-:]|\.\d+/g,""),"SUMMARY:"+esc(t.titel)];
+  if(t.zeit){ const s=d+"T"+t.zeit.replace(":","")+"00"; z.push("DTSTART:"+s,"DURATION:PT1H"); } else z.push("DTSTART;VALUE=DATE:"+d);
+  if(t.notiz) z.push("DESCRIPTION:"+esc(t.notiz));
+  const r={tag:"DAILY",woche:"WEEKLY",monat:"MONTHLY",jahr:"YEARLY"}[t.wdh]; if(r) z.push("RRULE:FREQ="+r);
+  if(t.erinn!=="keine") z.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+esc(t.titel),"TRIGGER:-PT"+(+t.erinn||0)+"M","END:VALARM");
+  z.push("END:VEVENT","END:VCALENDAR"); laden((t.titel||"termin").replace(/[^\wäöüÄÖÜß -]/g,"").slice(0,40)+".ics",z.join("\r\n"),"text/calendar");
+}
+
+/* ---------- Erinnerungen ---------- */
+let swReg=null; if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").then(r=>swReg=r).catch(()=>{});
+function piep(){ try{ const K=window.AudioContext||window.webkitAudioContext, a=new K(); [0,.25,.5].forEach(o=>{ const os=a.createOscillator(),g=a.createGain(); os.frequency.value=880; g.gain.setValueAtTime(.25,a.currentTime+o); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+o+.2); os.connect(g); g.connect(a.destination); os.start(a.currentTime+o); os.stop(a.currentTime+o+.22); }); }catch(e){} }
+function pruefen(){
+  const jetzt=Date.now(), h=heute(); let neu=false;
+  for(const s of [h,plus(h,1)]) for(const t of amTag(s)){
+    if(!t.zeit||t.erinn==="keine") continue;
+    const wann=new Date(s+"T"+t.zeit+":00").getTime(), ab=wann-(+t.erinn||0)*6e4, key=t.id+"|"+s;
+    if(jetzt>=ab&&jetzt<=wann+10*6e4&&!D.gemeldet[key]){
+      D.gemeldet[key]=1; neu=true; const text=(s===h?"Heute":"Morgen")+" um "+t.zeit+" Uhr";
+      $("aTitel").textContent=t.titel; $("aText").textContent=text+(t.notiz?"\n"+t.notiz:""); $("alarm").classList.add("an"); piep();
+      if(navigator.vibrate) try{ navigator.vibrate([300,150,300]); }catch(e){}
+      if("Notification" in window&&Notification.permission==="granted"){ try{ if(swReg&&swReg.showNotification) swReg.showNotification("🔔 "+t.titel,{body:text,tag:key,icon:"icons/icon-192.png"}); else new Notification("🔔 "+t.titel,{body:text}); }catch(e){} }
+    }
+  }
+  if(neu){ const alt=plus(h,-3); Object.keys(D.gemeldet).forEach(k=>{ if(k.split("|")[1]<alt) delete D.gemeldet[k]; }); try{localStorage.setItem("kalender-daten",JSON.stringify(D));}catch(e){} }
+}
+$("aOk").onclick=()=>$("alarm").classList.remove("an");
+setInterval(pruefen,20000); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ pruefen(); kalender(); } });
+
+/* ---------- Reiter ---------- */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("an",x===b));
+  document.querySelectorAll(".seite").forEach(s=>s.classList.toggle("an",s.id===b.dataset.s));
+  if(b.dataset.s==="sNotizen")notizen(); if(b.dataset.s==="sSicherung")sicherungInfo(); if(b.dataset.s==="sKalender")kalender(); window.scrollTo(0,0); });
+kalender(); pruefen();
+window.__k={D:()=>D,findetStatt,feiertag};
+})();
+</script>
+</body>
+</html>
