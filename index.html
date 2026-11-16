@@ -5,14 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kalender</title>
 <meta name="theme-color" content="#0f1420">
+<script>
+/* Darstellung: "auto" (wie das Handy, Standard), "hell" oder "dunkel" */
+(function(){
+  var w="auto"; try{ w=localStorage.getItem("kalenderThema")||"auto"; }catch(e){}
+  var mq=window.matchMedia&&matchMedia("(prefers-color-scheme: light)");
+  window.__thema={ wahl:w, setzen:function(neu){
+    if(neu){ this.wahl=neu; try{ localStorage.setItem("kalenderThema",neu); }catch(e){} }
+    var hell=this.wahl==="hell"||(this.wahl==="auto"&&mq&&mq.matches);
+    document.documentElement.setAttribute("data-theme",hell?"light":"dark");
+    var m=document.querySelector('meta[name=theme-color]'); if(m) m.content=hell?"#f3f5f9":"#0f1420";
+  }};
+  window.__thema.setzen();
+  if(mq&&mq.addEventListener) mq.addEventListener("change",function(){ window.__thema.setzen(); });
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>
   :root{--hg:#0f1420;--karte:#1b2233;--karte2:#232c42;--text:#f2f5fb;--leise:#8e99b3;--akzent:#38bdf8;--akzentText:#06202e;--rand:rgba(255,255,255,.08);--rot:#f87171}
-  @media (prefers-color-scheme: light){
-    :root{--hg:#f3f5f9;--karte:#ffffff;--karte2:#e6ebf3;--text:#131a26;--leise:#6b7689;--akzent:#0284c7;--akzentText:#ffffff;--rand:rgba(0,0,0,.09);--rot:#dc2626}
-  }
+  :root[data-theme=light]{--hg:#f3f5f9;--karte:#ffffff;--karte2:#e6ebf3;--text:#131a26;--leise:#6b7689;--akzent:#0284c7;--akzentText:#ffffff;--rand:rgba(0,0,0,.09);--rot:#dc2626}
+  .seg{display:flex;background:var(--karte);border:1px solid var(--rand);border-radius:12px;padding:3px;gap:2px}
+  .seg button{border:0;background:none;border-radius:9px;padding:7px 12px;font-size:14px;color:var(--leise);flex:1;white-space:nowrap}
+  .seg button.an{background:var(--akzent);color:var(--akzentText);font-weight:600}
+  .ansichtZeile{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .ansichtZeile .seg{flex:1;min-width:200px}
+  .wtag{background:var(--karte);border-radius:14px;margin-bottom:8px;overflow:hidden;border:1px solid transparent}
+  .wtag.heute{border-color:var(--akzent)}
+  .wkopf{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 12px;cursor:pointer}
+  .wkopf b{font-size:16px}.wkopf .wd{color:var(--leise);font-size:14px}.wkopf .ft{color:var(--rot);font-size:13px}
+  .wkopf .plus{margin-left:auto;border:0;background:var(--karte2);border-radius:9px;width:34px;height:30px;font-size:18px;color:var(--akzent)}
+  .wtag.so .wkopf b,.wtag.frei .wkopf b{color:var(--rot)}
+  .wtag .eintrag{margin:0 8px 8px;background:var(--hg)}
+  .wleer{color:var(--leise);font-size:13.5px;padding:0 12px 10px}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;margin:0;background:var(--hg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   button,input,select,textarea{font:inherit;color:inherit}
@@ -74,7 +100,10 @@
 <body>
 <div id="app">
   <section class="seite an" id="sKalender">
-    <div class="kopf"><button class="knopf" id="bVor" aria-label="Monat zurück">‹</button><h1 id="monat" style="text-align:center"></h1><button class="knopf" id="bNach" aria-label="Monat vor">›</button><button class="knopf" id="bHeute">Heute</button><button class="knopf" id="bJahr">Jahr</button></div>
+    <div class="kopf"><button class="knopf" id="bVor" aria-label="Monat zurück">‹</button><h1 id="monat" style="text-align:center"></h1><button class="knopf" id="bNach" aria-label="Monat vor">›</button><button class="knopf" id="bHeute">Heute</button></div>
+    <div class="ansichtZeile"><div class="seg" id="segModus"><button data-m="woche">Woche</button><button data-m="monat">Monat</button><button data-m="jahr">Jahr</button></div>
+      <div class="seg" id="segTage" style="flex:0 0 auto;min-width:0"><button data-t="5">5 Tage</button><button data-t="7">7 Tage</button></div></div>
+    <div id="wocheSicht" hidden></div>
     <div id="monatSicht">
     <div class="wt"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div></div>
     <div class="gitter" id="gitter"></div>
@@ -91,7 +120,11 @@
     <div id="notizListe"></div>
   </section>
   <section class="seite" id="sSicherung">
-    <div class="kopf"><h1>Sicherung &amp; Einstellungen</h1></div>
+    <div class="kopf"><h1>Einstellungen</h1></div>
+    <h2 style="margin-top:4px">Darstellung</h2>
+    <div class="seg" id="segThema" style="margin-bottom:6px"><button data-th="auto">Automatisch</button><button data-th="hell">☀️ Hell</button><button data-th="dunkel">🌙 Dunkel</button></div>
+    <div class="info" style="font-size:13px">„Automatisch“ richtet sich nach der Einstellung deines Handys.</div>
+    <h2>Sicherung</h2>
     <div class="info" id="sInfo"></div>
     <div class="reihe" style="margin-bottom:10px"><button class="knopf haupt" id="bExport">Sicherung speichern</button><button class="knopf" id="bImport">Sicherung einspielen</button></div>
     <input type="file" id="datei" accept=".json,application/json" hidden>
@@ -101,7 +134,7 @@
     <button class="knopf" id="bErlauben">Benachrichtigungen erlauben</button>
   </section>
 </div>
-<nav><button data-s="sKalender" class="an">📅 Kalender</button><button data-s="sNotizen">📝 Notizen</button><button data-s="sSicherung">💾 Sicherung</button></nav>
+<nav><button data-s="sKalender" class="an">📅 Kalender</button><button data-s="sNotizen">📝 Notizen</button><button data-s="sSicherung">⚙️ Einstellungen</button></nav>
 <div id="blende"><div class="blatt" id="blatt"></div></div>
 <div id="alarm"><div><div style="font-size:40px">🔔</div><h3 id="aTitel"></h3><p id="aText" style="color:var(--leise)"></p><button class="knopf haupt" id="aOk" style="width:100%">OK</button></div></div>
 <div id="hinweis"></div>
@@ -156,7 +189,28 @@ const feiertag=s=>feiertage(+s.slice(0,4))[s];
 const arbeitsfrei=s=>{ const n=feiertag(s); return n&&n!=="Heiligabend"&&n!=="Silvester"; };
 
 /* ---------- Kalender ---------- */
-let sicht=new Date(), gewaehlt=heute(), modus="monat"; sicht.setDate(1);
+let sicht=new Date(), gewaehlt=heute(), modus="monat", wTage=7; sicht.setDate(1);
+try{ const a=JSON.parse(localStorage.getItem("kalender-ansicht")); if(a){ if(["woche","monat","jahr"].includes(a.modus)) modus=a.modus; if(a.tage===5||a.tage===7) wTage=a.tage; } }catch(e){}
+const ansichtMerken=()=>{ try{ localStorage.setItem("kalender-ansicht",JSON.stringify({modus,tage:wTage})); }catch(e){} };
+function kw(s){ const d=dat(s); d.setDate(d.getDate()+3-((d.getDay()+6)%7)); const j=new Date(d.getFullYear(),0,4,12); return 1+Math.round(((d-j)/864e5-3+((j.getDay()+6)%7))/7); }
+const montag=s=>plus(s,-((dat(s).getDay()+6)%7));
+function wocheZeigen(){
+  const mo=montag(gewaehlt), bis=plus(mo,wTage-1), a=dat(mo), b=dat(bis), h=heute();
+  $("monat").textContent="KW "+kw(mo)+" · "+a.getDate()+"."+(a.getMonth()!==b.getMonth()?" "+MON[a.getMonth()].slice(0,3)+".":"")+"–"+b.getDate()+". "+MON[b.getMonth()].slice(0,3)+".";
+  const box=$("wocheSicht"); box.innerHTML="";
+  for(let i=0;i<wTage;i++){
+    const s=plus(mo,i), d=dat(s), f=feiertag(s), liste=amTag(s);
+    const kl=["wtag"]; if(s===h)kl.push("heute"); if(d.getDay()===0)kl.push("so"); if(arbeitsfrei(s))kl.push("frei");
+    const plusK=el("button",{class:"plus",type:"button","aria-label":"Termin an diesem Tag",text:"+",onclick:e=>{ e.stopPropagation(); gewaehlt=s; terminForm(null); }});
+    const kopf=el("div",{class:"wkopf",onclick:()=>{ gewaehlt=s; sicht=new Date(d.getFullYear(),d.getMonth(),1); modus="monat"; ansichtMerken(); kalender(); }},
+      el("b",{text:(s===h?"Heute":WT[d.getDay()])}), el("span",{class:"wd",text:d.getDate()+". "+MON[d.getMonth()].slice(0,3)+"."}), f?el("span",{class:"ft",text:"🎉 "+f}):null, plusK);
+    const tag=el("div",{class:kl.join(" ")},kopf);
+    liste.forEach(t=>tag.append(karte(t)));
+    if(!liste.length) tag.append(el("div",{class:"wleer",text:"Keine Termine"}));
+    box.append(tag);
+  }
+}
+
 function jahrZeigen(){
   const j=sicht.getFullYear(), jetzt=new Date(), h=heute(), box=$("jahrSicht"); $("monat").textContent=j; box.innerHTML="";
   for(let m=0;m<12;m++){
@@ -167,15 +221,19 @@ function jahrZeigen(){
     for(let d=1;d<=n;d++){ const s=j+"-"+p2(m+1)+"-"+p2(d), t=amTag(s), frei=arbeitsfrei(s), so=new Date(j,m,d).getDay()===0;
       const z=el("span",{class:"d"+(so||frei?" rot":"")+(frei?" ft":"")+(s===h?" heute":""),text:d,title:feiertag(s)||null});
       if(t.length) z.style.background=(t[0].farbe||FARBEN[0])+"66"; g.append(z); }
-    box.append(el("div",{class:"mon",onclick:()=>{ sicht=new Date(j,m,1); modus="monat"; kalender(); }},kopf,g));
+    box.append(el("div",{class:"mon",onclick:()=>{ sicht=new Date(j,m,1); modus="monat"; ansichtMerken(); kalender(); }},kopf,g));
   }
   $("ftTitel").textContent="Feiertage "+j+" (Bayern)"; const l=$("ftListe"); l.innerHTML="";
   Object.entries(feiertage(j)).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([s,name])=>{ const d=dat(s);
     l.append(el("div",{class:"ftz"},el("span",{text:WT[d.getDay()].slice(0,2)+", "+p2(d.getDate())+"."+p2(d.getMonth()+1)+"."}),el("b",{text:name+(arbeitsfrei(s)?"":" (kein Feiertag)"),style:arbeitsfrei(s)?"":"font-weight:400;color:var(--leise)"}))); });
 }
 function kalender(){
-  $("monatSicht").hidden=modus==="jahr"; $("jahrWrap").hidden=modus!=="jahr"; $("bJahr").textContent=modus==="jahr"?"Monat":"Jahr";
+  $("monatSicht").hidden=modus!=="monat"; $("jahrWrap").hidden=modus!=="jahr"; $("wocheSicht").hidden=modus!=="woche";
+  document.querySelectorAll("#segModus button").forEach(b=>b.classList.toggle("an",b.dataset.m===modus));
+  document.querySelectorAll("#segTage button").forEach(b=>b.classList.toggle("an",+b.dataset.t===wTage));
+  $("segTage").hidden=modus!=="woche";
   if(modus==="jahr") return jahrZeigen();
+  if(modus==="woche") return wocheZeigen();
   const j=sicht.getFullYear(), m=sicht.getMonth(); $("monat").textContent=MON[m]+" "+j;
   const start=new Date(j,m,1,12); start.setDate(1-((start.getDay()+6)%7));
   const g=$("gitter"); g.innerHTML=""; const h=heute();
@@ -204,9 +262,22 @@ function karte(t,tag){
     t.erinn!=="keine"&&t.zeit?el("div",{text:"🔔"}):null);
   e.style.borderLeftColor=t.farbe||FARBEN[0]; return e;
 }
-$("bVor").onclick=()=>{ if(modus==="jahr")sicht.setFullYear(sicht.getFullYear()-1); else sicht.setMonth(sicht.getMonth()-1); kalender(); };
-$("bNach").onclick=()=>{ if(modus==="jahr")sicht.setFullYear(sicht.getFullYear()+1); else sicht.setMonth(sicht.getMonth()+1); kalender(); };
-$("bJahr").onclick=()=>{ modus=modus==="jahr"?"monat":"jahr"; kalender(); };
+function blaettern(r){
+  if(modus==="jahr") sicht.setFullYear(sicht.getFullYear()+r);
+  else if(modus==="woche"){ gewaehlt=plus(gewaehlt,7*r); const d=dat(gewaehlt); sicht=new Date(d.getFullYear(),d.getMonth(),1); }
+  else sicht.setMonth(sicht.getMonth()+r);
+  kalender();
+}
+$("bVor").onclick=()=>blaettern(-1);
+$("bNach").onclick=()=>blaettern(1);
+document.querySelectorAll("#segModus button").forEach(b=>b.onclick=()=>{
+  modus=b.dataset.m;
+  if(modus==="monat"||modus==="jahr"){ const d=dat(gewaehlt); sicht=new Date(d.getFullYear(),d.getMonth(),1); }
+  ansichtMerken(); kalender(); });
+document.querySelectorAll("#segTage button").forEach(b=>b.onclick=()=>{ wTage=+b.dataset.t; ansichtMerken(); kalender(); });
+function themaZeigen(){ document.querySelectorAll("#segThema button").forEach(b=>b.classList.toggle("an",b.dataset.th===window.__thema.wahl)); }
+document.querySelectorAll("#segThema button").forEach(b=>b.onclick=()=>{ window.__thema.setzen(b.dataset.th); themaZeigen(); });
+themaZeigen();
 $("bHeute").onclick=()=>{ sicht=new Date(); sicht.setDate(1); gewaehlt=heute(); kalender(); };
 $("bTermin").onclick=()=>terminForm(null);
 
